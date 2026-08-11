@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VChat — WhatsApp Chat Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    :root {
+      /* Typography & Constants */
+      --font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --transition-speed: 0.25s;
+      --border-radius-bubble: 8px;
+      --blue-checkmark: #34b7f1;
+
+      /* Dark Mode Palette (Default) */
+      --bg-app: #0b141a;
+      --bg-panel: #111b21;
+      --bg-panel-hover: #202c33;
+      --bg-active: #202c33;
+      --bg-input: #2a3942;
+      --border-color: #222e35;
+      
+      --text-primary: #e9edef;
+      --text-secondary: #8696a0;
+      --text-muted: #667781;
+      
+      --green-brand: #25d366;
+      --green-brand-hover: #1ebd5b;
+      --green-primary: #00a884;
+      
+      --bubble-incoming: #202c33;
+      --bubble-outgoing: #005c4b;
+      --bubble-outgoing-tail: #005c4b;
+      --bubble-incoming-tail: #202c33;
+      
+      --text-bubble-incoming: #e9edef;
+      --text-bubble-outgoing: #e9edef;
+      --text-time-incoming: #8696a0;
+      --text-time-outgoing: #8bbaa7;
+      
+      --audio-wave-bg: #3f5261;
+      --audio-wave-bg-right: #3e7466;
+      --audio-wave-active: #34b7f1;
+      
+      --doodle-opacity: 0.05;
+      --doodle-filter: invert(1);
+      --shadow-card: rgba(0, 0, 0, 0.6);
+      --bg-card: #202c33;
+      --border-card: #2a3942;
+    }
+
+    [data-theme="light"] {
+      /* Light Mode Palette */
+      --bg-app: #f0f2f5;
+      --bg-panel: #ffffff;
+      --bg-panel-hover: #f0f2f5;
+      --bg-active: #eae6df;
+      --bg-input: #f0f2f5;
+      --border-color: #e9edef;
+      
+      --text-primary: #111b21;
+      --text-secondary: #667781;
+      --text-muted: #8696a0;
+      
+      --green-brand: #00a884;
+      --green-brand-hover: #008f70;
+      --green-primary: #008069;
+      
+      --bubble-incoming: #ffffff;
+      --bubble-outgoing: #d9fdd3;
+      --bubble-outgoing-tail: #d9fdd3;
+      --bubble-incoming-tail: #ffffff;
+      
+      --text-bubble-incoming: #111b21;
+      --text-bubble-outgoing: #111b21;
+      --text-time-incoming: #667781;
+      --text-time-outgoing: #597a68;
+      
+      --audio-wave-bg: #d5dbdf;
+      --audio-wave-bg-right: #a6d9be;
+      --audio-wave-active: #34b7f1;
+      
+      --doodle-opacity: 0.35;
+      --doodle-filter: none;
+      --shadow-card: rgba(0, 0, 0, 0.08);
+      --bg-card: #ffffff;
+      --border-card: #e9edef;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-app);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background var(--transition-speed), color var(--transition-speed);
+    }
+
+    /* ── Utilities ────────────────────────────────────────────────────────── */
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: background var(--transition-speed), color var(--transition-speed);
+      outline: none;
+    }
+    .icon-btn:hover {
+      background: var(--bg-panel-hover);
+      color: var(--text-primary);
+    }
+    .icon-btn.active {
+      color: var(--green-brand);
+    }
+
+    /* Theme toggle header (Floating top-right on upload screen) */
+    .theme-toggle-header {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 100;
+    }
+
+    /* ── Upload Screen ─────────────────────────────────────────────────────── */
+    #uploadScreen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-app);
+      padding: 20px;
+      position: relative;
+    }
+
+    .upload-card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 12px 40px var(--shadow-card);
+      border: 1px solid var(--border-card);
+      transition: background var(--transition-speed), border-color var(--transition-speed);
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      background: var(--green-brand);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.25);
+    }
+
+    .upload-card h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .upload-card .subtitle {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 16px;
+      padding: 36px 20px;
+      cursor: pointer;
+      transition: border-color var(--transition-speed), background var(--transition-speed);
+      position: relative;
+      background: var(--bg-app);
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--green-brand);
+      background: rgba(37, 211, 102, 0.04);
+    }
+
+    .drop-zone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .drop-text {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .drop-text span {
+      color: var(--green-brand);
+      font-weight: 600;
+    }
+
+    .file-name {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--green-brand);
+      font-weight: 600;
+      min-height: 1.2em;
+    }
+
+    .btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background var(--transition-speed), transform 0.1s;
+      font-family: inherit;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn-green {
+      background: var(--green-brand);
+      color: #fff;
+    }
+    .btn-green:hover:not(:disabled) {
+      background: var(--green-brand-hover);
+    }
+
+    .progress-wrap {
+      display: none;
+      margin-top: 18px;
+    }
+    .progress-bg {
+      background: var(--border-color);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--green-brand);
+      border-radius: 99px;
+      animation: indeterminate 1.4s infinite;
+      width: 40%;
+    }
+
+    @keyframes indeterminate {
+      0%   { margin-left: -40%; }
+      100% { margin-left: 110%; }
+    }
+
+    .progress-label {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .notice {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      display: none;
+      line-height: 1.4;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .notice.warn {
+      background: rgba(233, 190, 110, 0.08);
+      color: #e9be6e;
+      border: 1px solid rgba(233, 190, 110, 0.2);
+    }
+    .notice.err {
+      background: rgba(243, 139, 168, 0.08);
+      color: #f38ba8;
+      border: 1px solid rgba(243, 139, 168, 0.2);
+    }
+
+    #senderWrap {
+      display: none;
+      margin-top: 24px;
+      text-align: left;
+    }
+    #senderWrap label {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    #senderSelect {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-app);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+      outline: none;
+      transition: border-color var(--transition-speed);
+      margin-bottom: 12px;
+    }
+    #senderSelect:focus {
+      border-color: var(--green-brand);
+    }
+
+    /* ── App Shell Layout ─────────────────────────────────────────────────── */
+    #appShell {
+      display: none;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      background: var(--bg-app);
+      flex-direction: row;
+    }
+
+    /* Side Rail (Desktop sidebar) */
+    .side-rail {
+      width: 64px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 0;
+      border-right: 1px solid var(--border-color);
+      transition: background var(--transition-speed), border-color var(--transition-speed);
+    }
+
+    .side-rail .rail-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background var(--transition-speed), color var(--transition-speed);
+    }
+    .side-rail .rail-icon:hover {
+      background: var(--bg-panel-hover);
+      color: var(--text-primary);
+    }
+    .side-rail .rail-icon.active {
+      background: var(--bg-active);
+      color: var(--green-brand);
+    }
+    .side-rail .rail-spacer {
+      flex: 1;
+    }
+    .side-rail .rail-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--green-brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      color: #fff;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+
+    /* Chat List Panel (Sidebar column) */
+    .chat-list-panel {
+      width: 360px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background var(--transition-speed), border-color var(--transition-speed);
+    }
+
+    .clp-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .clp-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .clp-header h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .clp-header-icons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .clp-search-wrap {
+      padding: 0 16px 12px;
+      flex-shrink: 0;
+    }
+    .clp-search {
+      background: var(--bg-input);
+      border-radius: 24px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+      transition: border-color var(--transition-speed), background var(--transition-speed);
+    }
+    .clp-search:focus-within {
+      background: var(--bg-panel);
+      border-color: var(--green-brand);
+    }
+    .clp-search input {
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.88rem;
+      outline: none;
+      width: 100%;
+    }
+    .clp-search input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .clp-filters {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 14px;
+      flex-shrink: 0;
+    }
+    .clp-filter {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: var(--bg-input);
+      cursor: pointer;
+      transition: background var(--transition-speed), color var(--transition-speed);
+      user-select: none;
+    }
+    .clp-filter:hover {
+      background: var(--bg-panel-hover);
+    }
+    .clp-filter.active {
+      background: rgba(37, 211, 102, 0.12);
+      color: var(--green-brand);
+      font-weight: 600;
+    }
+
+    .clp-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .clp-list::-webkit-scrollbar { width: 5px; }
+    .clp-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+    .clp-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 18px;
+      background: var(--bg-panel);
+      cursor: pointer;
+      border-left: 4px solid var(--green-brand);
+      transition: background var(--transition-speed);
+    }
+    .clp-item:hover {
+      background: var(--bg-panel-hover);
+    }
+    .clp-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--green-brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: #fff;
+      font-weight: 700;
+    }
+    .clp-item-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .clp-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .clp-item-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .clp-item-time {
+      font-size: 0.75rem;
+      color: var(--green-brand);
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+    .clp-item-sub {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 3px;
+    }
+
+    /* Mobile Bottom Navigation */
+    .mobile-bottom-nav {
+      display: none;
+      height: 60px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-color);
+      justify-content: space-around;
+      align-items: center;
+      flex-shrink: 0;
+      transition: background var(--transition-speed), border-color var(--transition-speed);
+    }
+    .mobile-bottom-nav .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 0.72rem;
+      cursor: pointer;
+      gap: 4px;
+      flex: 1;
+      padding: 6px 0;
+    }
+    .mobile-bottom-nav .nav-item.active {
+      color: var(--green-brand);
+      font-weight: 600;
+    }
+    .mobile-bottom-nav .nav-icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ── Chat Screen ────────────────────────────────────────────────────────── */
+    #chatScreen {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      background: var(--bg-app);
+      transition: background var(--transition-speed);
+    }
+
+    .chat-header {
+      background: var(--bg-panel);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+      gap: 10px;
+      z-index: 10;
+      transition: background var(--transition-speed), border-color var(--transition-speed);
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .chat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--green-brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    .chat-info {
+      min-width: 0;
+    }
+    .chat-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-sub {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-header-icons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .btn-dl {
+      background: var(--green-brand);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+      transition: background var(--transition-speed);
+      margin-left: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-dl:hover {
+      background: var(--green-brand-hover);
+    }
+
+    .back-btn {
+      color: var(--text-secondary);
+      display: none; /* Desktop hidden */
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px 6px;
+      outline: none;
+    }
+    .back-btn:hover {
+      color: var(--text-primary);
+    }
+
+    /* ── Wallpaper Background ──────────────────────────────────────────── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .messages::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23000000' fill-opacity='0'/%3E%3Cg fill='none' stroke='%23888888' stroke-width='1.2' opacity='0.9'%3E%3Crect x='12' y='8' width='26' height='18' rx='4' ry='4'/%3E%3Cpolygon points='14,26 14,32 20,26'/%3E%3Ccircle cx='65' cy='18' r='8'/%3E%3Cpath d='M60 14 q5-3 10 0'/%3E%3Cpath d='M58 11 q7-5 14 0'/%3E%3Cpath d='M110 16 c0-4 6-6 6 0 c0-6 6-4 6 0 c0 4-6 10-6 10 c0 0-6-6-6-10z'/%3E%3Ccircle cx='160' cy='16' r='8'/%3E%3Ccircle cx='157' cy='14' r='1' fill='%23888888'/%3E%3Ccircle cx='163' cy='14' r='1' fill='%23888888'/%3E%3Cpath d='M157 18 q3 3 6 0'/%3E%3Cpolygon points='205,10 207,15 212,15 208,18 210,23 205,20 200,23 202,18 198,15 203,15'/%3E%3Cpath d='M250 8 l0 12 m0-12 l8-3 l0 10'/%3E%3Ccircle cx='250' cy='20' r='2.5'/%3E%3Ccircle cx='258' cy='17' r='2.5'/%3E%3Cpath d='M295 20 l0-8 c0-3 5-3 5 0 l0 3 l4 0 c3 0 3 7 0 7 l-9 0z'/%3E%3Crect x='335' y='10' width='22' height='16' rx='3'/%3E%3Ccircle cx='346' cy='18' r='4'/%3E%3Crect x='337' y='8' width='6' height='4' rx='1'/%3E%3Ccircle cx='20' cy='60' r='10'/%3E%3Cpath d='M15 57 q5-4 10 0'/%3E%3Ccircle cx='17' cy='58' r='1' fill='%23888888'/%3E%3Ccircle cx='23' cy='58' r='1' fill='%23888888'/%3E%3Cpath d='M16 63 q4 3 8 0'/%3E%3Cpath d='M60 48 l10 0 m-5-5 l0 10 m-8-2 l16 0' stroke-linecap='round'/%3E%3Crect x='95' y='48' width='30' height='22' rx='5'/%3E%3Cpolygon points='97,70 97,76 103,70'/%3E%3Ccircle cx='155' cy='58' r='11'/%3E%3Ccircle cx='152' cy='55' r='1.5' fill='%23888888'/%3E%3Ccircle cx='158' cy='55' r='1.5' fill='%23888888'/%3E%3Cpath d='M151 62 q4 4 8 0'/%3E%3Cpath d='M200 50 l8 8 m0-8 l-8 8' stroke-linecap='round' stroke-width='2'/%3E%3Cpath d='M240 50 l0 18 m0-18 l10 10 m-10 0 l10-10' stroke-linecap='round'/%3E%3Cpolygon points='285,48 287,55 294,55 288,59 290,66 284,62 278,66 280,59 274,55 281,55'/%3E%3Crect x='320' y='48' width='18' height='22' rx='9'/%3E%3Ccircle cx='329' cy='52' r='2'/%3E%3Cpath d='M323 58 l12 0'/%3E%3Cpath d='M323 62 l12 0'/%3E%3Cpath d='M323 66 l8 0'/%3E%3Cpath d='M365 50 l0 12 m0-12 l8-3 l0 10'/%3E%3Ccircle cx='365' cy='62' r='2.5'/%3E%3Ccircle cx='373' cy='59' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 400px 400px;
+      opacity: var(--doodle-opacity);
+      filter: var(--doodle-filter);
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity var(--transition-speed);
+    }
+
+    .messages::-webkit-scrollbar { width: 6px; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(120, 120, 120, 0.2); border-radius: 4px; }
+
+    /* ── Date separator ─────────────────────────────────────────────────────── */
+    .date-sep {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-primary);
+      margin: 14px 0;
+      background: var(--bg-panel);
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 8px;
+      align-self: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-weight: 500;
+      z-index: 1;
+      position: relative;
+      transition: background var(--transition-speed), color var(--transition-speed);
+    }
+
+    /* ── Message rows ────────────────────────────────────────────────────────── */
+    .row {
+      display: flex;
+      padding: 0 10px;
+      margin-bottom: 3px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .row.right  { justify-content: flex-end; }
+    .row.left   { justify-content: flex-start; }
+    .row.new-sender { margin-top: 10px; }
+
+    /* ── Bubbles ─────────────────────────────────────────────────────────────── */
+    .bubble {
+      max-width: 65%;
+      width: fit-content;
+      padding: 6px 12px 6px 12px;
+      border-radius: var(--border-radius-bubble);
+      font-size: 0.92rem;
+      line-height: 1.45;
+      word-break: break-word;
+      word-wrap: break-word;
+      position: relative;
+      box-shadow: 0 1px 1px var(--shadow-card);
+      transition: background var(--transition-speed);
+    }
+
+    /* Right bubble (you) */
+    .row.right .bubble {
+      background: var(--bubble-outgoing);
+      border-bottom-right-radius: 2px;
+      color: var(--text-bubble-outgoing);
+    }
+
+    .row.right.new-sender .bubble::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 0 10px 10px;
+      border-color: transparent transparent var(--bubble-outgoing-tail) transparent;
+      transition: border-color var(--transition-speed);
+    }
+
+    /* Left bubble (others) */
+    .row.left .bubble {
+      background: var(--bubble-incoming);
+      border-bottom-left-radius: 2px;
+      color: var(--text-bubble-incoming);
+    }
+
+    .row.left.new-sender .bubble::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: -8px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 10px 10px 0;
+      border-color: transparent var(--bubble-incoming-tail) transparent transparent;
+      transition: border-color var(--transition-speed);
+    }
+
+    .sender-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .msg-text {
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .msg-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .msg-time {
+      font-size: 0.65rem;
+      color: var(--text-time-incoming);
+      font-weight: 500;
+    }
+
+    .row.right .msg-time {
+      color: var(--text-time-outgoing);
+    }
+
+    /* Double checkmark */
+    .tick {
+      display: flex;
+      align-items: center;
+      color: var(--blue-checkmark);
+    }
+
+    /* ── Reply quote ─────────────────────────────────────────────────────────── */
+    .reply-quote {
+      border-left: 4px solid var(--green-brand);
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 0 6px 6px 0;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+    [data-theme="dark"] .reply-quote {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .reply-quote .rq-sender {
+      color: var(--green-brand);
+      font-weight: 600;
+      font-size: 0.74rem;
+      margin-bottom: 2px;
+    }
+    .reply-quote .rq-text {
+      color: var(--text-secondary);
+      font-size: 0.74rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    /* ── Audio widget ─────────────────────────────────────────────────────────── */
+    .audio-widget {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 0 2px;
+      min-width: 240px;
+    }
+
+    .audio-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--bg-panel);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+    }
+    .row.right .audio-avatar {
+      background: rgba(0,0,0,0.12);
+    }
+
+    .play-btn {
+      background: var(--green-brand);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition-speed), transform 0.1s;
+    }
+    .play-btn:hover {
+      transform: scale(1.08);
+    }
+    .play-btn.playing {
+      background: #e8506a;
+    }
+
+    .audio-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 2.2px;
+      height: 32px;
+    }
+
+    .waveform span {
+      display: inline-block;
+      width: 3px;
+      border-radius: 2px;
+      background: var(--audio-wave-bg);
+      transition: background var(--transition-speed);
+    }
+
+    .row.right .waveform span {
+      background: var(--audio-wave-bg-right);
+    }
+
+    .waveform.playing span {
+      background: var(--audio-wave-active) !important;
+    }
+
+    .waveform.playing span:nth-child(odd)  { animation: wave 0.7s infinite ease-in-out; }
+    .waveform.playing span:nth-child(even) { animation: wave 0.7s 0.15s infinite ease-in-out; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.35); }
+      50%       { transform: scaleY(1); }
+    }
+
+    .audio-dur {
+      font-size: 0.67rem;
+      color: var(--text-time-incoming);
+      font-weight: 500;
+    }
+
+    /* ── Image ───────────────────────────────────────────────────────────────── */
+    .msg-image {
+      max-width: 100%;
+      max-height: 280px;
+      width: auto;
+      height: auto;
+      border-radius: 6px;
+      margin-top: 2px;
+      cursor: pointer;
+      display: block;
+      object-fit: cover;
+      transition: opacity 0.15s;
+    }
+
+    .msg-image:hover {
+      opacity: 0.88;
+    }
+
+    .caption {
+      font-size: 0.84rem;
+      color: var(--text-primary);
+      margin-top: 6px;
+    }
+
+    /* File Link style */
+    .file-attachment {
+      font-size: 0.88rem;
+      color: #34b7f1;
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .file-attachment svg {
+      flex-shrink: 0;
+    }
+
+    /* ── Link preview card ────────────────────────────────────────────────── */
+    .link-preview {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border-left: 4px solid var(--green-brand);
+    }
+    [data-theme="dark"] .link-preview {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .link-preview .lp-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--green-brand);
+    }
+    .link-preview .lp-url {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      word-break: break-all;
+      margin-top: 3px;
+    }
+    .link-preview .lp-url a {
+      color: #34b7f1;
+      text-decoration: none;
+    }
+    .link-preview .lp-domain {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+      text-transform: lowercase;
+    }
+
+    /* ── Forwarded label ──────────────────────────────────────────────── */
+    .fwd-label {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .fwd-icon {
+      display: flex;
+      align-items: center;
+      transform: scaleX(-1);
+    }
+
+    /* ── Bottom input bar (Decorative) ────────────────────────────────── */
+    .input-bar {
+      background: var(--bg-panel);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border-color);
+      transition: background var(--transition-speed), border-color var(--transition-speed);
+    }
+    .input-bar .ib-icon {
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      cursor: default;
+      transition: color var(--transition-speed);
+    }
+    .input-bar .ib-icon:hover {
+      color: var(--text-primary);
+    }
+    .input-bar .ib-field {
+      flex: 1;
+      background: var(--bg-input);
+      border-radius: 22px;
+      padding: 10px 18px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      transition: background var(--transition-speed);
+    }
+
+    /* ── Lightbox Overlay ───────────────────────────────────────────────── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    #lightbox.show {
+      display: flex;
+    }
+    #lightbox img {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    #lightbox .lb-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity var(--transition-speed);
+    }
+    #lightbox .lb-close:hover {
+      opacity: 1;
+    }
+
+    /* ── Responsiveness and Transitions ─────────────────────────────────── */
+    @media (max-width: 767px) {
+      #appShell {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+      .side-rail {
+        display: none; /* Hide desktop side rail on mobile */
+      }
+      .chat-list-panel {
+        width: 100% !important;
+        display: flex;
+        flex-direction: column;
+      }
+      #chatScreen {
+        position: absolute;
+        top: 0;
+        right: -100%;
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      #chatScreen.active {
+        right: 0;
+      }
+      .back-btn {
+        display: block !important; /* Show back button on mobile chat screen */
+      }
+      .mobile-bottom-nav {
+        display: flex !important; /* Show bottom nav on mobile */
+      }
+      .clp-header-left #listBackBtn {
+        display: block !important;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .back-btn {
+        display: none !important; /* Hide back button on desktop chat screen */
+      }
+      .mobile-bottom-nav {
+        display: none !important; /* Hide bottom nav on desktop */
+      }
+      .clp-header-left #listBackBtn {
+        display: flex;
+      }
+    }
+
+    /* Reactions & Picker styling */
+    .bubble-wrapper {
+      position: relative;
+      max-width: 65%;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 6px;
+    }
+    .row.right .bubble-wrapper {
+      align-items: flex-end;
+    }
+    .row.left .bubble-wrapper {
+      align-items: flex-start;
+    }
+    .bubble {
+      max-width: 100% !important;
+      width: fit-content;
+    }
+
+    .reaction-pill {
+      position: absolute;
+      bottom: -10px;
+      right: 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2px 6px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      box-shadow: 0 2px 4px var(--shadow-card);
+      z-index: 5;
+      user-select: none;
+      transition: background var(--transition-speed);
+      color: var(--text-primary);
+    }
+    .row.left .reaction-pill {
+      right: auto;
+      left: 12px;
+    }
+    .reaction-pill:hover {
+      background: var(--bg-panel-hover);
+    }
+    .reaction-pill-count {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.65rem;
+    }
+    .msg-video {
+      max-width: 100%;
+      max-height: 280px;
+      width: auto;
+      height: auto;
+      border-radius: 6px;
+      margin-top: 2px;
+      display: block;
+      outline: none;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Theme Toggle Floating (Upload Screen) -->
+  <div class="theme-toggle-header">
+    <button id="pageThemeToggle" class="icon-btn" title="Toggle Theme">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+  </div>
+
+  <!-- ── Upload Screen ─────────────────────────────────────────────────────── -->
+  <div id="uploadScreen">
+    <div class="upload-card">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+      <h1>VChat Viewer</h1>
+      <p class="subtitle">Convert a WhatsApp export <code>.zip</code> or extracted <code>_chat.txt</code> into a fully responsive interactive conversation view.</p>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".zip,.txt" />
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div class="drop-text">Drag &amp; drop your <span>.zip</span> or <span>_chat.txt</span> here<br />or <span>click to browse</span></div>
+        <div class="file-name" id="fileName"></div>
+      </div>
+
+      <button class="btn btn-green" id="convertBtn" disabled>Upload &amp; Convert</button>
+
+      <div id="senderWrap">
+        <label>Who are you in this chat?</label>
+        <select id="senderSelect"></select>
+        <button class="btn btn-green" id="viewBtn">View Conversation →</button>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bg"><div class="progress-bar"></div></div>
+        <div class="progress-label">Converting &amp; compiling attachments…</div>
+      </div>
+      <div class="notice" id="notice"></div>
+    </div>
+  </div>
+
+  <!-- ── App Shell ────────────────────────────────────────────────────────── -->
+  <div id="appShell">
+    
+    <!-- Side Rail (Desktop) -->
+    <div class="side-rail">
+      <div class="rail-icon active" title="Chats" data-tab="chats">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+      <div class="rail-icon" title="Updates" data-tab="updates">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M6.34 17.66l2.83-2.83M17.66 6.34l-2.83 2.83"/>
+        </svg>
+      </div>
+      <div class="rail-icon" title="Communities" data-tab="communities">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div class="rail-spacer"></div>
+      <div class="rail-icon" id="desktopThemeToggle" title="Toggle Theme">
+        <!-- JS handles toggling -->
+      </div>
+      <div class="rail-icon" title="Settings" data-tab="settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </div>
+      <div class="rail-avatar">🙂</div>
+    </div>
+
+    <!-- Chat List Panel -->
+    <div class="chat-list-panel">
+      <div class="clp-header">
+        <div class="clp-header-left">
+          <button class="icon-btn" id="listBackBtn" title="Back to Upload" style="display: none;">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          </button>
+          <h2>Chats</h2>
+        </div>
+        <div class="clp-header-icons">
+          <button class="icon-btn" title="New chat">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+          <button class="icon-btn" title="Menu">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Search Filter bar -->
+      <div class="clp-search-wrap">
+        <div class="clp-search">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="chatSearchInput" placeholder="Search in this chat..." />
+        </div>
+      </div>
+
+      <!-- Redesign 2024 Pill Filters -->
+      <div class="clp-filters">
+        <div class="clp-filter active">All</div>
+        <div class="clp-filter">Unread</div>
+        <div class="clp-filter">Groups</div>
+      </div>
+
+      <!-- Chat items list -->
+      <div class="clp-list">
+        <div class="clp-item" id="chatListItem">
+          <div class="clp-avatar" id="clpAvatarInitial">💬</div>
+          <div class="clp-item-body">
+            <div class="clp-item-top">
+              <div class="clp-item-name" id="clpChatName">Chat Archive</div>
+              <div class="clp-item-time" id="clpChatTime">00:00</div>
+            </div>
+            <div class="clp-item-sub" id="clpChatSub">No messages loaded yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Bottom Navigation (Meta Redesign 2024 Layout) -->
+      <div class="mobile-bottom-nav">
+        <div class="nav-item active" data-tab="chats">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <div class="nav-label">Chats</div>
+        </div>
+        <div class="nav-item" data-tab="updates">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M6.34 17.66l2.83-2.83M17.66 6.34l-2.83 2.83"/>
+            </svg>
+          </div>
+          <div class="nav-label">Updates</div>
+        </div>
+        <div class="nav-item" data-tab="communities">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="nav-label">Communities</div>
+        </div>
+        <div class="nav-item" data-tab="calls">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+          </div>
+          <div class="nav-label">Calls</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Screen Column -->
+    <div id="chatScreen">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <button class="back-btn" id="backBtn" title="Back to Chats">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </button>
+          <div class="chat-avatar">💬</div>
+          <div class="chat-info">
+            <div class="chat-title" id="chatTitle">Select a conversation</div>
+            <div class="chat-sub" id="chatSub">Participants detailed here</div>
+          </div>
+        </div>
+        <!-- Inline Header Search Bar -->
+        <div class="chat-header-search" id="chatHeaderSearch" style="display: none; align-items: center; gap: 8px; background: var(--bg-input); border-radius: 20px; padding: 6px 12px; flex: 1; max-width: 240px; margin: 0 12px;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="chatHeaderSearchInput" placeholder="Search messages..." style="border:none; background:transparent; outline:none; font-size:0.85rem; color:var(--text-primary); width:100%;" />
+          <button id="closeHeaderSearch" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.95rem; font-weight:600; outline:none; display:flex; align-items:center;">✕</button>
+        </div>
+
+        <div class="chat-header-icons">
+          <button class="icon-btn" id="headerSearchBtn" title="Search messages">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+          <button class="icon-btn" title="Menu">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+          </button>
+          <button class="btn-dl" id="dlBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Download HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Thread -->
+      <div class="messages" id="messages"></div>
+
+      <!-- Bottom input bar (Decorative) -->
+      <div class="input-bar">
+        <span class="ib-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+        </span>
+        <span class="ib-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+        </span>
+        <div class="ib-field">Type a message</div>
+        <span class="ib-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Lightbox overlay ── -->
+  <div id="lightbox">
+    <span class="lb-close" id="lbClose">&#10005;</span>
+    <img id="lbImg" alt="Media view" />
+  </div>
+
+  <!-- ── Script Logic ── -->
+  <script>
+    // ── Global Helper Functions ───────────────────────────────────────────
+    function senderColor(name) {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+      const hue = (h / 65535 * 360).toFixed(0);
+      const theme = document.documentElement.getAttribute("data-theme") || "dark";
+      const lightness = theme === "light" ? "38%" : "68%";
+      return `hsl(${hue}, 65%, ${lightness})`;
+    }
+
+    function formatDate(iso) {
+      return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    }
+
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;");
+    }
+
+    function formatDur(s) {
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    }
+
+    const URL_ONLY_RE = /^(https?:\/\/[^\s]+)$/i;
+    function extractUrl(text) {
+      const m = (text || "").trim().match(URL_ONLY_RE);
+      return m ? m[1] : null;
+    }
+    
+    function urlDomain(url) {
+      try { return new URL(url).hostname.replace(/^www\./, ""); }
+      catch (e) { return url; }
+    }
+
+    function buildLinkPreviewEl(url) {
+      const domain = urlDomain(url);
+      const wrap = document.createElement("div"); wrap.className = "link-preview";
+      wrap.addEventListener("click", () => window.open(url, "_blank"));
+      const title = document.createElement("div"); title.className = "lp-title"; title.textContent = domain;
+      const link  = document.createElement("div"); link.className  = "lp-url";
+      const a = document.createElement("a"); a.href = url; a.textContent = url; a.target = "_blank";
+      a.addEventListener("click", e => e.stopPropagation());
+      link.appendChild(a);
+      const dom2 = document.createElement("div"); dom2.className = "lp-domain"; dom2.textContent = domain;
+      wrap.appendChild(title); wrap.appendChild(link); wrap.appendChild(dom2);
+      return wrap;
+    }
+
+    function buildLinkPreviewHtml(url) {
+      const domain = urlDomain(url);
+      return `<div class="link-preview" onclick="window.open('${url.replace(/'/g,"%27")}','_blank')">
+        <div class="lp-title">${escHtml(domain)}</div>
+        <div class="lp-url"><a href="${url}" target="_blank" onclick="event.stopPropagation()">${escHtml(url)}</a></div>
+        <div class="lp-domain">${escHtml(domain)}</div>
+      </div>`;
+    }
+
+    // ── Theme State Management ──────────────────────────────────────────
+    function setTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("theme", theme);
+      updateThemeToggleIcons(theme);
+      
+      // Dynamic color update on already rendered user names if any exist
+      document.querySelectorAll(".sender-name").forEach(sn => {
+        const sender = sn.textContent;
+        sn.style.color = senderColor(sender);
+      });
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+      const newTheme = currentTheme === "dark" ? "light" : "dark";
+      setTheme(newTheme);
+    }
+
+    function updateThemeToggleIcons(theme) {
+      const sunSvg = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
+      const moonSvg = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+      
+      const pageBtn = document.getElementById("pageThemeToggle");
+      const deskBtn = document.getElementById("desktopThemeToggle");
+      
+      if (theme === "light") {
+        if (pageBtn) pageBtn.innerHTML = moonSvg;
+        if (deskBtn) deskBtn.innerHTML = moonSvg;
+      } else {
+        if (pageBtn) pageBtn.innerHTML = sunSvg;
+        if (deskBtn) deskBtn.innerHTML = sunSvg;
+      }
+    }
+
+    // Initialize Theme
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    setTheme(savedTheme);
+
+    const pageThemeToggle = document.getElementById("pageThemeToggle");
+    if (pageThemeToggle) pageThemeToggle.addEventListener("click", toggleTheme);
+    const desktopThemeToggle = document.getElementById("desktopThemeToggle");
+    if (desktopThemeToggle) desktopThemeToggle.addEventListener("click", toggleTheme);
+
+    // ── Upload & State Management ───────────────────────────────────────
+    let _manifest = null, _filename = null, _me = null;
+    let jsZipInstance = null;
+    var AUDIO = {};
+    let currentAudio = null, currentPlayBtn = null, currentWave = null;
+
+    const dropZone   = document.getElementById("dropZone");
+    const fileInput  = document.getElementById("fileInput");
+    const convertBtn = document.getElementById("convertBtn");
+    const notice     = document.getElementById("notice");
+    let selectedFile = null;
+
+    dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", ()  => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault(); dropZone.classList.remove("drag-over");
+      const f = e.dataTransfer.files[0];
+      if (f && (f.name.endsWith(".zip") || f.name.endsWith(".txt"))) setFile(f);
+    });
+    fileInput.addEventListener("change", () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+    function setFile(f) {
+      selectedFile = f;
+      document.getElementById("fileName").textContent = "📎 " + f.name;
+      convertBtn.disabled = false;
+      notice.style.display = "none";
+    }
+
+    convertBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+      convertBtn.disabled = true;
+      document.getElementById("progressWrap").style.display = "block";
+      notice.style.display = "none";
+
+      const fd = new FormData();
+      fd.append("zipfile", selectedFile);
+      try {
+        const res  = await fetch("/convert", { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Conversion failed.");
+
+        _manifest = data.manifest; _filename = data.filename;
+
+        if (data.warnings && data.warnings.missing_media > 0) {
+          notice.className = "notice warn";
+          notice.textContent = `⚠ ${data.warnings.missing_media} attachment files were not found in the uploaded package. Placeholders will be rendered instead.`;
+          notice.style.display = "block";
+        }
+
+        const sel = document.getElementById("senderSelect");
+        sel.innerHTML = "";
+        data.manifest.participants.forEach(p => {
+          const o = document.createElement("option"); o.value = p; o.textContent = p; sel.appendChild(o);
+        });
+        convertBtn.style.display = "none";
+        document.getElementById("senderWrap").style.display = "block";
+
+      } catch (e) {
+        notice.className = "notice err";
+        notice.textContent = "❌ " + e.message;
+        notice.style.display = "block";
+        convertBtn.disabled = false;
+      } finally {
+        document.getElementById("progressWrap").style.display = "none";
+      }
+    });
+
+    document.getElementById("viewBtn").addEventListener("click", () => {
+      _me = document.getElementById("senderSelect").value;
+      renderChat(_manifest, _me);
+    });
+
+    // ── Navigation Flow & Handlers ──────────────────────────────────────────
+    function exitToUpload() {
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+      jsZipInstance = null;
+      document.getElementById("appShell").style.display  = "none";
+      document.getElementById("uploadScreen").style.display = "flex";
+      document.getElementById("messages").innerHTML = "";
+      document.getElementById("senderWrap").style.display  = "none";
+      convertBtn.style.display  = "block";
+      convertBtn.disabled       = false;
+      document.getElementById("fileName").textContent = "";
+      notice.style.display = "none";
+      document.getElementById("chatSearchInput").value = "";
+    }
+
+    document.getElementById("listBackBtn").addEventListener("click", exitToUpload);
+    document.getElementById("backBtn").addEventListener("click", () => {
+      // For mobile: slide active conversation window out
+      document.getElementById("chatScreen").classList.remove("active");
+      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    });
+
+    // CLP Filter Pills Toggling
+    document.querySelectorAll(".clp-filter").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".clp-filter").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    // Tab items switcher synchronization
+    document.querySelectorAll(".mobile-bottom-nav .nav-item").forEach(item => {
+      item.addEventListener("click", () => {
+        document.querySelectorAll(".mobile-bottom-nav .nav-item").forEach(i => i.classList.remove("active"));
+        item.classList.add("active");
+        const tab = item.getAttribute("data-tab");
+        document.querySelectorAll(".side-rail .rail-icon").forEach(icon => {
+          if (icon.getAttribute("data-tab") === tab) {
+            document.querySelectorAll(".side-rail .rail-icon").forEach(i => i.classList.remove("active"));
+            icon.classList.add("active");
+          }
+        });
+      });
+    });
+
+    document.querySelectorAll(".side-rail .rail-icon").forEach(item => {
+      if (item.id === "desktopThemeToggle") return;
+      item.addEventListener("click", () => {
+        document.querySelectorAll(".side-rail .rail-icon").forEach(i => i.classList.remove("active"));
+        item.classList.add("active");
+        const tab = item.getAttribute("data-tab");
+        document.querySelectorAll(".mobile-bottom-nav .nav-item").forEach(nav => {
+          if (nav.getAttribute("data-tab") === tab) {
+            document.querySelectorAll(".mobile-bottom-nav .nav-item").forEach(n => n.classList.remove("active"));
+            nav.classList.add("active");
+          }
+        });
+      });
+    });
+
+    // ── Search Filtering (Real-time) ──────────────────────────────────────
+    function filterMessages(query) {
+      const q = query.toLowerCase().trim();
+      const rows = document.querySelectorAll("#messages .row");
+      const dateSeps = document.querySelectorAll("#messages .date-sep");
+      
+      if (!q) {
+        rows.forEach(r => r.style.display = "flex");
+        dateSeps.forEach(d => d.style.display = "inline-block");
+        return;
+      }
+      
+      rows.forEach(r => {
+        const searchData = r.getAttribute("data-search") || "";
+        if (searchData.includes(q)) {
+          r.style.display = "flex";
+        } else {
+          r.style.display = "none";
+        }
+      });
+      
+      // Hide empty date headers
+      const container = document.getElementById("messages");
+      const children = Array.from(container.children);
+      let lastSep = null;
+      let sepHasContent = false;
+      
+      children.forEach(child => {
+        if (child.classList.contains("date-sep")) {
+          if (lastSep) {
+            lastSep.style.display = sepHasContent ? "inline-block" : "none";
+          }
+          lastSep = child;
+          sepHasContent = false;
+        } else if (child.classList.contains("row")) {
+          if (child.style.display !== "none") {
+            sepHasContent = true;
+          }
+        }
+      });
+      if (lastSep) {
+        lastSep.style.display = sepHasContent ? "inline-block" : "none";
+      }
+    }
+
+    // Synchronize inputs
+    const chatSearchInput = document.getElementById("chatSearchInput");
+    const chatHeaderSearchInput = document.getElementById("chatHeaderSearchInput");
+
+    function syncSearch(e) {
+      const q = e.target.value;
+      if (chatSearchInput && chatSearchInput !== e.target) chatSearchInput.value = q;
+      if (chatHeaderSearchInput && chatHeaderSearchInput !== e.target) chatHeaderSearchInput.value = q;
+      filterMessages(q);
+    }
+
+    if (chatSearchInput) chatSearchInput.addEventListener("input", syncSearch);
+    if (chatHeaderSearchInput) chatHeaderSearchInput.addEventListener("input", syncSearch);
+
+    // Toggle Header Search Bar
+    const headerSearchBtn = document.getElementById("headerSearchBtn");
+    const chatHeaderSearch = document.getElementById("chatHeaderSearch");
+    const closeHeaderSearch = document.getElementById("closeHeaderSearch");
+    const chatInfo = document.querySelector(".chat-info");
+    const chatAvatar = document.querySelector(".chat-avatar");
+
+    if (headerSearchBtn && chatHeaderSearch) {
+      headerSearchBtn.addEventListener("click", () => {
+        chatHeaderSearch.style.display = "flex";
+        if (window.innerWidth < 480) {
+          if (chatInfo) chatInfo.style.display = "none";
+          if (chatAvatar) chatAvatar.style.display = "none";
+        }
+        chatHeaderSearchInput.focus();
+      });
+    }
+
+    if (closeHeaderSearch && chatHeaderSearch) {
+      closeHeaderSearch.addEventListener("click", () => {
+        chatHeaderSearch.style.display = "none";
+        if (chatInfo) chatInfo.style.display = "block";
+        if (chatAvatar) chatAvatar.style.display = "flex";
+        if (chatSearchInput) chatSearchInput.value = "";
+        if (chatHeaderSearchInput) chatHeaderSearchInput.value = "";
+        filterMessages("");
+      });
+    }
+
+    // ── Chat Rendering ───────────────────────────────────────────────────
+    // ── Unified Message Row HTML Generator (Single Source of Truth) ──────────
+    function buildMessageRowHTML(msg, me, isNewSender, getMediaUrl, isStandalone) {
+      const side        = msg.sender === me ? "right" : "left";
+      const isRight     = msg.sender === me;
+      
+      // Calculate hash color
+      let h = 0;
+      for (let i = 0; i < msg.sender.length; i++) h = (h * 31 + msg.sender.charCodeAt(i)) & 0xffff;
+      const hue = (h / 65535 * 360).toFixed(0);
+
+      const snHtml = (isNewSender && !isRight)
+        ? `<div class="sender-name" data-hue="${hue}">${escHtml(msg.sender)}</div>` : "";
+      const tickHtml = isRight ? `<span class="tick"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 5L9.5 12.5L6 9"></path><path d="M22 5L14.5 12.5L13 11"></path></svg></span>` : "";
+      const fwdHtml = (msg.forwarded || msg.is_forwarded)
+        ? `<div class="fwd-label"><span class="fwd-icon"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 11 22 16 17 21"></polyline><path d="M21 16H9a4 4 0 0 1-4-4V5"></path></svg></span> Forwarded</div>` : "";
+      const rqHtml = msg.reply_to
+        ? `<div class="reply-quote"><div class="rq-sender">${escHtml(msg.reply_to.sender || "")}</div><div class="rq-text">${escHtml(msg.reply_to.content || "")}</div></div>`
+        : "";
+      
+      let body = "";
+      if (msg.type === "text") {
+        const url = extractUrl(msg.content);
+        body = (url ? buildLinkPreviewHtml(url) : "") +
+               `<div class="msg-text">${escHtml(msg.content || "🚫 This message was deleted")}</div>`;
+      } else if (msg.type === "file") {
+        body = `<a href="#" class="file-attachment" onclick="event.preventDefault()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> <span>${escHtml(msg.filename || "attachment")}</span></a>`;
+      } else if (msg.type === "audio") {
+        const mediaUrl = isStandalone ? getMediaUrl(msg.audio_file, "audio") : "";
+        const durFmt = msg.duration_seconds ? formatDur(msg.duration_seconds) : "0:00";
+        const waveHtml = [5,10,18,26,18,12,22,28,14,8,24,18,10,16,22,12,26,14,8,20,24,16,10,20,12,28,14,18,10,12].map(h => `<span style="height:${h}px"></span>`).join("");
+        const miss = msg.missing ? `<div style="font-size:.75rem;color:#e9be6e;padding:2px 0;font-weight:500;">⚠ Audio file not found in package</div>` : "";
+        
+        const widgetAttr = isStandalone ? "" : `data-media-ref="${msg.audio_file}" data-media-type="audio" data-audio-id="${msg.id}"`;
+        
+        body = `${miss}<div class="audio-widget" ${widgetAttr}>
+          <div class="audio-avatar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></div>
+          <button class="play-btn" onclick="playAudio(this,${msg.id})">&#9654;</button>
+          <div class="audio-info">
+            <div class="waveform" id="w${msg.id}">${waveHtml}</div>
+            <div class="audio-dur" id="d${msg.id}">${durFmt}</div>
+          </div>
+        </div>`;
+      } else if (msg.type === "image") {
+        const mediaUrl = isStandalone ? getMediaUrl(msg.media_file, "image") : "";
+        const miss   = msg.missing ? `<div style="font-size:.8rem;color:#e9be6e;padding:2px 0;font-weight:500;">⚠ Image file not found in package</div>` : "";
+        const imgTag = (isStandalone && mediaUrl)
+          ? `<img class="msg-image" src="${mediaUrl}" onclick="openLightbox(this.src)" alt="Image"/>`
+          : (!isStandalone && !msg.missing && !msg.too_large)
+            ? `<img class="msg-image" data-media-ref="${msg.media_file}" data-media-type="image" onclick="openLightbox(this.src)" alt="Image"/>`
+            : "";
+        const tooLarge = msg.too_large ? `<div style="font-size:.8rem;color:#e9be6e;padding:2px 0;font-weight:500;">⚠ Image file is too large to preview inline (>30MB)</div>` : "";
+        const cap    = msg.caption ? `<div class="caption">${escHtml(msg.caption)}</div>` : "";
+        body = msg.too_large ? (tooLarge + cap) : (miss + imgTag + cap);
+      } else if (msg.type === "video") {
+        const mediaUrl = isStandalone ? getMediaUrl(msg.media_file, "video") : "";
+        const miss   = msg.missing ? `<div style="font-size:.8rem;color:#e9be6e;padding:2px 0;font-weight:500;">⚠ Video file not found in package</div>` : "";
+        const vidTag = (isStandalone && mediaUrl)
+          ? `<video class="msg-video" src="${mediaUrl}" controls preload="metadata"></video>`
+          : (!isStandalone && !msg.missing && !msg.too_large)
+            ? `<video class="msg-video" data-media-ref="${msg.media_file}" data-media-type="video" controls preload="metadata"></video>`
+            : "";
+        const tooLarge = msg.too_large ? `<div style="font-size:.8rem;color:#e9be6e;padding:2px 0;font-weight:500;">⚠ Video file is too large to preview inline (>30MB)</div>` : "";
+        const cap    = msg.caption ? `<div class="caption">${escHtml(msg.caption)}</div>` : "";
+        body = msg.too_large ? (tooLarge + cap) : (miss + vidTag + cap);
+      }
+
+      // Build reactions
+      let reactionsHtml = "";
+      if (msg.reactions && msg.reactions.length > 0) {
+        const counts = {};
+        msg.reactions.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
+        const unique = Object.keys(counts);
+        const total = msg.reactions.length;
+        const countLabel = total > 1 ? `<span class="reaction-pill-count">${total}</span>` : "";
+        const tooltip = msg.reactions.map(r => `${escHtml(r.sender)}: ${escHtml(r.emoji)}`).join("&#10;");
+        reactionsHtml = `<div class="reaction-pill" title="${tooltip}">
+          <span class="reaction-pill-emojis">${escHtml(unique.join(""))}</span>
+          ${countLabel}
+        </div>`;
+      }
+
+      const searchTerms = [
+        msg.sender,
+        msg.content || "",
+        msg.caption || "",
+        msg.filename || ""
+      ].join(" ").toLowerCase();
+
+      return `<div class="row ${side}${isNewSender ? " new-sender" : ""}" data-search="${escHtml(searchTerms)}">
+        <div class="bubble-wrapper">
+          <div class="bubble" id="bubble-${msg.id}">
+            ${snHtml}${fwdHtml}${rqHtml}${body}
+            <div class="msg-footer"><span class="msg-time">${msg.timestamp.slice(11,16)}</span>${tickHtml}</div>
+            ${reactionsHtml}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // ── Live Chat Rendering ───────────────────────────────────────────────
+    function renderChat(manifest, me) {
+      document.getElementById("uploadScreen").style.display = "none";
+      document.getElementById("appShell").style.display = "flex";
+      document.getElementById("chatTitle").textContent = manifest.chat_name;
+      document.getElementById("chatSub").textContent =
+        manifest.participants.join(", ") + "  ·  " + manifest.messages.length + " messages";
+
+      // populate left sidebar row
+      document.getElementById("clpChatName").textContent = manifest.chat_name;
+      document.getElementById("clpAvatarInitial").textContent = (manifest.chat_name || "?").trim().charAt(0).toUpperCase();
+      const lastMsg = manifest.messages[manifest.messages.length - 1];
+      if (lastMsg) {
+        document.getElementById("clpChatTime").textContent = lastMsg.timestamp.slice(11, 16);
+        let preview = lastMsg.type === "text" ? (lastMsg.content || "") :
+          lastMsg.type === "audio" ? "🎤 Voice note" :
+          lastMsg.type === "image" ? "📷 Image" : "📎 " + (lastMsg.filename || "Attachment");
+        document.getElementById("clpChatSub").textContent = preview;
+      }
+
+      // Add click handler to chat item for mobile slide screen
+      document.getElementById("chatListItem").onclick = () => {
+        document.getElementById("chatScreen").classList.add("active");
+      };
+
+      const container = document.getElementById("messages");
+      let html = "";
+      let lastDate = "", lastSender = "";
+
+      manifest.messages.forEach(msg => {
+        const date = msg.timestamp.slice(0, 10);
+        if (date !== lastDate) {
+          lastDate = date; lastSender = "";
+          html += `<div class="date-sep">${formatDate(date)}</div>`;
+        }
+
+        const isNewSender = msg.sender !== lastSender;
+        lastSender = msg.sender;
+
+        html += buildMessageRowHTML(msg, me, isNewSender, null, false);
+      });
+
+      container.innerHTML = html;
+      container.scrollTop = container.scrollHeight;
+
+      // Extract and resolve ZIP contents locally in the browser background asynchronously
+      resolveClientMedia();
+    }
+
+    // ── Client-side ZIP Media Lazy Resolver ──────────────────────────────
+    function lookupZipEntry(zip, ref) {
+      let entry = zip.file(ref);
+      if (entry) return entry;
+      const base = ref.split("/").pop();
+      for (const name in zip.files) {
+        if (name.split("/").pop() === base) {
+          return zip.file(name);
+        }
+      }
+      return null;
+    }
+
+    async function resolveClientMedia() {
+      if (!selectedFile || !selectedFile.name.endsWith(".zip")) return;
+      try {
+        if (!jsZipInstance) {
+          jsZipInstance = await JSZip.loadAsync(selectedFile);
+        }
+        const zip = jsZipInstance;
+
+        // Resolve images
+        const imgEls = document.querySelectorAll("#messages img[data-media-ref]");
+        imgEls.forEach(async img => {
+          const ref = img.getAttribute("data-media-ref");
+          const entry = lookupZipEntry(zip, ref);
+          if (entry) {
+            const data = await entry.async("blob");
+            const ext = ref.split(".").pop().toLowerCase();
+            const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+            const blob = new Blob([data], { type: mime });
+            img.src = URL.createObjectURL(blob);
+            img.removeAttribute("data-media-ref");
+          }
+        });
+
+        // Resolve videos
+        const vidEls = document.querySelectorAll("#messages video[data-media-ref]");
+        vidEls.forEach(async vid => {
+          const ref = vid.getAttribute("data-media-ref");
+          const entry = lookupZipEntry(zip, ref);
+          if (entry) {
+            const data = await entry.async("blob");
+            const ext = ref.split(".").pop().toLowerCase();
+            const mime = ext === "mp4" ? "video/mp4" : `video/${ext}`;
+            const blob = new Blob([data], { type: mime });
+            vid.src = URL.createObjectURL(blob);
+            vid.removeAttribute("data-media-ref");
+          }
+        });
+
+        // Resolve audios
+        const audWidgets = document.querySelectorAll("#messages .audio-widget[data-media-ref]");
+        audWidgets.forEach(async widget => {
+          const ref = widget.getAttribute("data-media-ref");
+          const id = widget.getAttribute("data-audio-id");
+          const entry = lookupZipEntry(zip, ref);
+          if (entry) {
+            const data = await entry.async("blob");
+            const blob = new Blob([data], { type: "audio/ogg" });
+            const url = URL.createObjectURL(blob);
+            AUDIO[id] = url;
+            widget.removeAttribute("data-media-ref");
+          }
+        });
+      } catch (e) {
+        console.error("Failed to resolve client-side media:", e);
+      }
+    }
+
+
+
+    // ── Global Audio Player Control ───────────────────────────────────────
+    window.playAudio = function(btn, id) {
+      if (currentAudio && !currentAudio.paused) {
+        currentAudio.pause();
+        currentPlayBtn.innerHTML = "&#9654;";
+        currentPlayBtn.classList.remove("playing");
+        if (currentWave) currentWave.classList.remove("playing");
+        if (currentPlayBtn === btn) {
+          currentAudio = null;
+          return;
+        }
+      }
+      
+      const audioSrc = AUDIO[id];
+      if (!audioSrc) return;
+
+      const audio = new Audio(audioSrc);
+      currentAudio = audio;
+      currentPlayBtn = btn;
+      
+      const wave = document.getElementById("w" + id);
+      currentWave = wave;
+      
+      const dur = document.getElementById("d" + id);
+      currentDur = dur;
+
+      btn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="4" height="16"></rect><rect x="16" y="4" width="4" height="16"></rect></svg>`;
+      btn.classList.add("playing");
+      if (wave) wave.classList.add("playing");
+      
+      audio.play();
+      audio.addEventListener("timeupdate", () => {
+        if (dur) dur.textContent = formatDur(Math.floor(audio.currentTime));
+      });
+      audio.addEventListener("ended", () => {
+        btn.innerHTML = "&#9654;";
+        btn.classList.remove("playing");
+        if (wave) wave.classList.remove("playing");
+        currentAudio = null;
+      });
+    };
+
+    // ── Standalone HTML Exporter ─────────────────────────────────────────
+    document.getElementById("dlBtn").addEventListener("click", async () => {
+      const dlBtn = document.getElementById("dlBtn");
+      const originalText = dlBtn.innerHTML;
+      dlBtn.disabled = true;
+      dlBtn.innerHTML = `<span>⏳ Compiling export…</span>`;
+      
+      try {
+        const media = {};
+        if (selectedFile && selectedFile.name.endsWith(".zip")) {
+          if (!jsZipInstance) {
+            jsZipInstance = await JSZip.loadAsync(selectedFile);
+          }
+          const zip = jsZipInstance;
+          
+          for (const msg of _manifest.messages) {
+            if (msg.too_large || msg.missing) continue;
+            
+            let ref = null, type = null, ext = null, mime = "application/octet-stream";
+            if (msg.type === "audio") {
+              ref = msg.audio_file; type = "audio"; mime = "audio/ogg";
+            } else if (msg.type === "image") {
+              ref = msg.media_file; type = "image";
+              ext = ref.split(".").pop().toLowerCase();
+              mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+            } else if (msg.type === "video") {
+              ref = msg.media_file; type = "video";
+              ext = ref.split(".").pop().toLowerCase();
+              mime = ext === "mp4" ? "video/mp4" : `video/${ext}`;
+            }
+            
+            if (ref && !media[ref]) {
+              const entry = lookupZipEntry(zip, ref);
+              if (entry) {
+                const arrayBuffer = await entry.async("arraybuffer");
+                let binary = "";
+                const bytes = new Uint8Array(arrayBuffer);
+                const len = bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                  binary += String.fromCharCode(bytes[i]);
+                }
+                const b64 = btoa(binary);
+                media[ref] = { data: b64, mime: mime };
+              }
+            }
+          }
+        }
+        
+        const html = buildStandaloneHTML(_manifest, media, _me);
+        const blob = new Blob([html], { type: "text/html" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = _filename;
+        a.click();
+      } catch (e) {
+        alert("Export compilation failed: " + e.message);
+      } finally {
+        dlBtn.disabled = false;
+        dlBtn.innerHTML = originalText;
+      }
+    });
+
+    function buildStandaloneHTML(manifest, media, me) {
+      const first = me || manifest.participants[0];
+      const audioEntries = [];
+      const reactionsScripts = [];
+      let rows = "", lastDate = "", lastSender = "";
+
+      manifest.messages.forEach(msg => {
+        const date = msg.timestamp.slice(0, 10);
+        if (date !== lastDate) {
+          lastDate = date; lastSender = "";
+          rows += `<div class="date-sep">${formatDate(date)}</div>`;
+        }
+
+        const isNewSender = msg.sender !== lastSender;
+        lastSender = msg.sender;
+
+        // Base64 standalone media resolver callback
+        const getMediaUrl = (ref, type) => {
+          const m = media[ref];
+          return m ? `data:${m.mime};base64,${m.data}` : "";
+        };
+
+        if (msg.reactions && msg.reactions.length > 0) {
+          const escapedReactions = JSON.stringify(msg.reactions)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/\//g, '\\u002f');
+          reactionsScripts.push(`REACTIONS[${msg.id}]=` + escapedReactions + ";");
+        }
+
+        // Cache base64 audio entry for packaging
+        if (msg.type === "audio" && !msg.missing && !msg.too_large) {
+          const mediaUrl = getMediaUrl(msg.audio_file, "audio");
+          if (mediaUrl) {
+            audioEntries.push(`AUDIO[${msg.id}]="${mediaUrl}";`);
+          }
+        }
+
+        rows += buildMessageRowHTML(msg, first, isNewSender, getMediaUrl, true);
+      });
+
+      return `<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${escHtml(manifest.chat_name)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --font-family: "Outfit", sans-serif;
+  --transition-speed: 0.25s;
+  --blue-checkmark: #34b7f1;
+  --bg-app: #0b141a;
+  --bg-panel: #111b21;
+  --bg-panel-hover: #202c33;
+  --border-color: #222e35;
+  --text-primary: #e9edef;
+  --text-secondary: #8696a0;
+  --text-muted: #667781;
+  --green-brand: #25d366;
+  --bubble-incoming: #202c33;
+  --bubble-outgoing: #005c4b;
+  --bubble-outgoing-tail: #005c4b;
+  --bubble-incoming-tail: #202c33;
+  --text-bubble-incoming: #e9edef;
+  --text-bubble-outgoing: #e9edef;
+  --text-time-incoming: #8696a0;
+  --text-time-outgoing: #8bbaa7;
+  --audio-wave-bg: #3f5261;
+  --audio-wave-bg-right: #3e7466;
+  --audio-wave-active: #34b7f1;
+  --doodle-opacity: 0.05;
+  --doodle-filter: invert(1);
+}
+[data-theme="light"] {
+  --bg-app: #f0f2f5;
+  --bg-panel: #ffffff;
+  --bg-panel-hover: #f0f2f5;
+  --border-color: #e9edef;
+  --text-primary: #111b21;
+  --text-secondary: #667781;
+  --text-muted: #8696a0;
+  --green-brand: #00a884;
+  --bubble-incoming: #ffffff;
+  --bubble-outgoing: #d9fdd3;
+  --bubble-outgoing-tail: #d9fdd3;
+  --bubble-incoming-tail: #ffffff;
+  --text-bubble-incoming: #111b21;
+  --text-bubble-outgoing: #111b21;
+  --text-time-incoming: #667781;
+  --text-time-outgoing: #597a68;
+  --audio-wave-bg: #d5dbdf;
+  --audio-wave-bg-right: #a6d9be;
+  --audio-wave-active: #34b7f1;
+  --doodle-opacity: 0.35;
+  --doodle-filter: none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-family);background:var(--bg-app);color:var(--text-primary);min-height:100vh;transition: background var(--transition-speed), color var(--transition-speed);}
+.header{background:var(--bg-panel);padding:12px 20px;border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;transition: background var(--transition-speed), border-color var(--transition-speed);}
+.header-left{display:flex;align-items:center;gap:12px;min-width:0;}
+.header-avatar{width:40px;height:40px;border-radius:50%;background:var(--green-brand);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;color:#fff;font-weight:600}
+.header-left-info{min-width:0;}
+.header h2{font-size:1rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.header p{font-size:.74rem;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.theme-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);background:none;border:none;cursor:pointer;outline:none;}
+.theme-btn:hover{color:var(--text-primary);background:var(--bg-panel-hover);}
+.messages{max-width:800px;margin:0 auto;padding:16px 10px;display:flex;flex-direction:column;min-height:calc(100vh - 65px);position:relative;}
+.messages::before{
+  content:"";position:absolute;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23000000' fill-opacity='0'/%3E%3Cg fill='none' stroke='%23888888' stroke-width='1.2' opacity='0.9'%3E%3Crect x='12' y='8' width='26' height='18' rx='4' ry='4'/%3E%3Cpolygon points='14,26 14,32 20,26'/%3E%3Ccircle cx='65' cy='18' r='8'/%3E%3Cpath d='M60 14 q5-3 10 0'/%3E%3Cpath d='M58 11 q7-5 14 0'/%3E%3Cpath d='M110 16 c0-4 6-6 6 0 c0-6 6-4 6 0 c0 4-6 10-6 10 c0 0-6-6-6-10z'/%3E%3Ccircle cx='160' cy='16' r='8'/%3E%3Ccircle cx='157' cy='14' r='1' fill='%23888888'/%3E%3Ccircle cx='163' cy='14' r='1' fill='%23888888'/%3E%3Cpath d='M157 18 q3 3 6 0'/%3E%3Cpolygon points='205,10 207,15 212,15 208,18 210,23 205,20 200,23 202,18 198,15 203,15'/%3E%3Cpath d='M250 8 l0 12 m0-12 l8-3 l0 10'/%3E%3Ccircle cx='250' cy='20' r='2.5'/%3E%3Ccircle cx='258' cy='17' r='2.5'/%3E%3Cpath d='M295 20 l0-8 c0-3 5-3 5 0 l0 3 l4 0 c3 0 3 7 0 7 l-9 0z'/%3E%3Crect x='335' y='10' width='22' height='16' rx='3'/%3E%3Ccircle cx='346' cy='18' r='4'/%3E%3Crect x='337' y='8' width='6' height='4' rx='1'/%3E%3Ccircle cx='20' cy='60' r='10'/%3E%3Cpath d='M15 57 q5-4 10 0'/%3E%3Ccircle cx='17' cy='58' r='1' fill='%23888888'/%3E%3Ccircle cx='23' cy='58' r='1' fill='%23888888'/%3E%3Cpath d='M16 63 q4 3 8 0'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat:repeat;background-size:400px 400px;
+  opacity:var(--doodle-opacity);filter:var(--doodle-filter);
+  pointer-events:none;z-index:0;transition: opacity var(--transition-speed);
+}
+.date-sep{text-align:center;font-size:.75rem;color:var(--text-primary);margin:12px auto;background:var(--bg-panel);padding:5px 14px;border-radius:8px;display:table;font-weight:500;z-index:1;position:relative;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition: background var(--transition-speed), color var(--transition-speed);}
+.row{display:flex;padding:0 10px;margin-bottom:3px;position:relative;z-index:1}
+.row.new-sender{margin-top:10px}
+.row.right{justify-content:flex-end}
+.row.left{justify-content:flex-start}
+.bubble{max-width:65%;width:fit-content;padding:6px 12px;border-radius:8px;font-size:.92rem;line-height:1.45;word-break:break-word;position:relative;box-shadow:0 1px 1px rgba(0,0,0,0.15)}
+.row.right .bubble{background:var(--bubble-outgoing);border-bottom-right-radius:2px;color:var(--text-bubble-outgoing)}
+.row.right.new-sender .bubble::after{content:"";position:absolute;bottom:0;right:-8px;width:0;height:0;border-style:solid;border-width:0 0 10px 10px;border-color:transparent transparent var(--bubble-outgoing-tail) transparent;transition: border-color var(--transition-speed);}
+.row.left .bubble{background:var(--bubble-incoming);border-bottom-left-radius:2px;color:var(--text-bubble-incoming)}
+.row.left.new-sender .bubble::after{content:"";position:absolute;bottom:0;left:-8px;width:0;height:0;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--bubble-incoming-tail) transparent transparent;transition: border-color var(--transition-speed);}
+.sender-name{font-size:.78rem;font-weight:600;margin-bottom:4px}
+.msg-text{white-space:pre-wrap;font-size:.9rem;line-height:1.5}
+.msg-footer{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:4px}
+.msg-time{font-size:.65rem;color:var(--text-time-incoming)}
+.row.right .msg-time{color:var(--text-time-outgoing)}
+.tick{display:flex;align-items:center;color:var(--blue-checkmark)}
+.audio-widget{display:flex;align-items:center;gap:12px;padding:4px 0 2px;min-width:240px}
+.audio-avatar{width:42px;height:42px;border-radius:50%;background:var(--bg-panel);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;color:var(--text-secondary)}
+.row.right .audio-avatar{background:rgba(0,0,0,0.12)}
+.play-btn{background:var(--green-brand);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:.85rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background var(--transition-speed);}
+.play-btn.playing{background:#e8506a}
+.audio-info{display:flex;flex-direction:column;gap:4px;flex:1}
+.waveform{display:flex;align-items:center;gap:2.2px;height:32px}
+.waveform span{display:inline-block;width:3px;border-radius:2px;background:var(--audio-wave-bg);transition:background var(--transition-speed)}
+.row.right .waveform span{background:var(--audio-wave-bg-right)}
+.waveform.playing span{background:var(--audio-wave-active)!important}
+.waveform.playing span:nth-child(odd){animation:wave .7s infinite ease-in-out}
+.waveform.playing span:nth-child(even){animation:wave .7s .15s infinite ease-in-out}
+@keyframes wave{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+.audio-dur{font-size:.67rem;color:var(--text-time-incoming)}
+.msg-image{max-width:100%;max-height:280px;width:auto;height:auto;border-radius:6px;margin-top:2px;cursor:pointer;display:block;object-fit:cover}
+.caption{font-size:.84rem;color:var(--text-primary);margin-top:6px}
+.file-attachment{font-size:0.88rem;color:#34b7f1;padding:4px 0;display:flex;align-items:center;gap:8px;text-decoration:none;font-weight:500;}
+.reply-quote{border-left:4px solid var(--green-brand);background:rgba(0,0,0,0.05);border-radius:0 6px 6px 0;padding:6px 10px;margin-bottom:6px}
+[data-theme="dark"] .reply-quote{background:rgba(255,255,255,0.04)}
+.reply-quote .rq-sender{color:var(--green-brand);font-weight:600;font-size:.74rem;margin-bottom:2px}
+.reply-quote .rq-text{color:var(--text-secondary);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+.link-preview{background:rgba(0,0,0,0.05);border-radius:6px;padding:10px;margin-bottom:6px;border-left:4px solid var(--green-brand)}
+[data-theme="dark"] .link-preview{background:rgba(0,0,0,0.2)}
+.link-preview .lp-title{font-weight:600;font-size:.85rem;color:var(--green-brand)}
+.link-preview .lp-url{font-size:.8rem;color:var(--text-secondary);word-break:break-all;margin-top:3px}
+.link-preview .lp-url a{color:#34b7f1;text-decoration:none}
+.link-preview .lp-domain{font-size:.74rem;color:var(--text-muted);margin-top:5px;text-transform:lowercase}
+.fwd-label{font-size:.72rem;color:var(--text-secondary);font-style:italic;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.fwd-icon{display:flex;align-items:center;transform:scaleX(-1)}
+#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;align-items:center;justify-content:center}
+#lightbox.show{display:flex}
+#lightbox img{max-width:90vw;max-height:85vh;border-radius:8px}
+.lb-close{position:absolute;top:20px;right:24px;color:#fff;font-size:2rem;cursor:pointer}
+.bubble-wrapper{position:relative;max-width:65%;display:flex;flex-direction:column;margin-bottom:6px}
+.row.right .bubble-wrapper{align-items:flex-end}
+.row.left .bubble-wrapper{align-items:flex-start}
+.bubble{max-width:100%!important;width:fit-content}
+
+.reaction-pill{position:absolute;bottom:-10px;right:12px;background:var(--bg-panel);border:1px solid var(--border-color);border-radius:12px;padding:2px 6px;display:flex;align-items:center;gap:3px;font-size:0.7rem;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.2);z-index:5;user-select:none;transition:background var(--transition-speed);color:var(--text-primary)}
+.row.left .reaction-pill{right:auto;left:12px}
+.reaction-pill:hover{background:var(--bg-panel-hover)}
+.reaction-pill-count{font-weight:600;color:var(--text-secondary);font-size:0.65rem}
+.msg-video{max-width:100%;max-height:280px;width:auto;height:auto;border-radius:6px;margin-top:2px;display:block;outline:none;object-fit:contain}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="header-avatar">💬</div>
+    <div class="header-left-info"><h2>${escHtml(manifest.chat_name)}</h2><p>${manifest.participants.map(escHtml).join(", ")}</p></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <!-- Inline Standalone Search Bar -->
+    <div id="standaloneSearchWrap" style="display:none;align-items:center;gap:6px;background:var(--bg-panel-hover);border-radius:20px;padding:4px 10px;max-width:200px;border:1px solid var(--border-color);">
+      <input type="text" id="standaloneSearchInput" placeholder="Search..." style="border:none;background:transparent;outline:none;font-size:0.8rem;color:var(--text-primary);width:100%;" />
+      <button onclick="toggleStandaloneSearch(false)" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.85rem;outline:none;">✕</button>
+    </div>
+    <button class="theme-btn" id="standaloneSearchBtn" onclick="toggleStandaloneSearch(true)" title="Search messages">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    </button>
+    <button id="standaloneThemeToggle" class="theme-btn" title="Toggle Theme"></button>
+  </div>
+</div>
+<div class="messages">${rows}</div>
+<div id="lightbox"><span class="lb-close" onclick="closeLightbox()">&#10005;</span><img id="lbImg" alt=""/></div>
+<script>
+var AUDIO={};
+${audioEntries.join("\n")}
+var REACTIONS={};
+${reactionsScripts.join("\n")}
+var ME="${escHtml(first).replace(/"/g, '\\"').replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}";
+
+var _cur=null,_curBtn=null,_curWave=null,_curDur=null;
+function formatDur(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}
+function playAudio(btn,id){
+  if(_cur){_cur.pause();_curBtn.innerHTML="&#9654;";_curBtn.classList.remove("playing");if(_curWave)_curWave.classList.remove("playing");if(_curBtn===btn){_cur=null;return;}}
+  if(!AUDIO[id])return;
+  var a=new Audio(AUDIO[id]);_cur=a;_curBtn=btn;
+  var w=document.getElementById("w"+id);_curWave=w;
+  var d=document.getElementById("d"+id);_curDur=d;
+  btn.innerHTML='<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="4" height="16"></rect><rect x="16" y="4" width="4" height="16"></rect></svg>';
+  btn.classList.add("playing");if(w)w.classList.add("playing");
+  a.play();
+  a.ontimeupdate=function(){if(d)d.textContent=formatDur(Math.floor(a.currentTime));};
+  a.onended=function(){btn.innerHTML="&#9654;";btn.classList.remove("playing");if(w)w.classList.remove("playing");_cur=null;};
+}
+function openLightbox(src){document.getElementById("lbImg").src=src;document.getElementById("lightbox").classList.add("show");}
+function closeLightbox(){document.getElementById("lightbox").classList.remove("show");}
+document.getElementById("lightbox").onclick=function(e){if(e.target===this)closeLightbox();};
+
+// Standalone Theme switcher
+function setStandaloneTheme(t){
+  document.documentElement.setAttribute("data-theme",t);
+  localStorage.setItem("vchat_standalone_theme",t);
+  var btn=document.getElementById("standaloneThemeToggle");
+  if(!btn)return;
+  var sun='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+  var moon='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+  btn.innerHTML= (t==="light")?moon:sun;
+  
+  // Update name colors
+  document.querySelectorAll(".sender-name").forEach(function(sn){
+    var hue = sn.getAttribute("data-hue");
+    var lightness = (t === "light") ? "38%" : "68%";
+    sn.style.color = "hsl(" + hue + ", 65%, " + lightness + ")";
+  });
+}
+document.getElementById("standaloneThemeToggle").onclick=function(){
+  var c=document.documentElement.getAttribute("data-theme")||"dark";
+  setStandaloneTheme(c==="dark"?"light":"dark");
+};
+setStandaloneTheme(localStorage.getItem("vchat_standalone_theme")||"dark");
+
+// Standalone Search Functionality
+function toggleStandaloneSearch(show) {
+  var wrap = document.getElementById("standaloneSearchWrap");
+  var input = document.getElementById("standaloneSearchInput");
+  if (!wrap) return;
+  if (show) {
+    wrap.style.display = "flex";
+    if (input) input.focus();
+  } else {
+    wrap.style.display = "none";
+    if (input) {
+      input.value = "";
+      filterStandalone("");
+    }
+  }
+}
+
+function filterStandalone(query) {
+  var q = query.toLowerCase().trim();
+  var rows = document.querySelectorAll(".messages .row");
+  var dateSeps = document.querySelectorAll(".messages .date-sep");
+  
+  if (!q) {
+    rows.forEach(function(r) { r.style.display = "flex"; });
+    dateSeps.forEach(function(d) { d.style.display = "table"; });
+    return;
+  }
+  
+  rows.forEach(function(r) {
+    var searchData = r.getAttribute("data-search") || "";
+    if (searchData.indexOf(q) > -1) {
+      r.style.display = "flex";
+    } else {
+      r.style.display = "none";
+    }
+  });
+  
+  // Hide empty date headers
+  var container = document.querySelector(".messages");
+  if (!container) return;
+  var children = Array.prototype.slice.call(container.children);
+  var lastSep = null;
+  var sepHasContent = false;
+  
+  children.forEach(function(child) {
+    if (child.classList.contains("date-sep")) {
+      if (lastSep) {
+        lastSep.style.display = sepHasContent ? "table" : "none";
+      }
+      lastSep = child;
+      sepHasContent = false;
+    } else if (child.classList.contains("row")) {
+      if (child.style.display !== "none") {
+        sepHasContent = true;
+      }
+    }
+  });
+  if (lastSep) {
+    lastSep.style.display = sepHasContent ? "table" : "none";
+  }
+}
+
+var stInput = document.getElementById("standaloneSearchInput");
+if (stInput) {
+  stInput.addEventListener("input", function(e) {
+    filterStandalone(e.target.value);
+  });
+}
+<\/script>
+</body>
+</html>`;
+    }
+
+    // ── Lightbox Overlay handlers ─────────────────────────────────────────
+    function openLightbox(src) {
+      document.getElementById("lbImg").src = src;
+      document.getElementById("lightbox").classList.add("show");
+    }
+
+    function renderReactions(reactions, bubbleEl) {
+      if (!bubbleEl) return;
+      const old = bubbleEl.querySelector(".reaction-pill");
+      if (old) old.remove();
+      if (!reactions || reactions.length === 0) return;
+      
+      const counts = {};
+      reactions.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
+      const unique = Object.keys(counts);
+      const total = reactions.length;
+      
+      const pill = document.createElement("div");
+      pill.className = "reaction-pill";
+      
+      const em = document.createElement("span");
+      em.className = "reaction-pill-emojis";
+      em.textContent = unique.join("");
+      pill.appendChild(em);
+      
+      if (total > 1) {
+        const co = document.createElement("span");
+        co.className = "reaction-pill-count";
+        co.textContent = total;
+        pill.appendChild(co);
+      }
+      
+      pill.title = reactions.map(r => `${r.sender}: ${r.emoji}`).join("\n");
+      bubbleEl.appendChild(pill);
+    }
+    document.getElementById("lbClose").addEventListener("click", () =>
+      document.getElementById("lightbox").classList.remove("show"));
+    document.getElementById("lightbox").addEventListener("click", e => {
+      if (e.target === document.getElementById("lightbox"))
+        document.getElementById("lightbox").classList.remove("show");
+    });
+  </script>
+</body>
+</html>

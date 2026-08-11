@@ -1,0 +1,22 @@
+# VChat — Python dependencies
+# Install with: pip install -r requirements.txt
+#
+# Windows note:
+#   sounddevice requires PortAudio — bundled automatically via the wheel.
+#   .opus playback requires ffmpeg in PATH if soundfile cannot decode it:
+#   https://ffmpeg.org/download.html
+#
+# macOS note:
+#   brew install portaudio ffmpeg
+#
+# Linux note:
+#   sudo apt install portaudio19-dev ffmpeg libopus0
+
+flask>=3.0
+mutagen>=1.47
+cryptography>=42.0
+pygame>=2.6
+sounddevice>=0.4
+soundfile>=0.12
+Pillow>=10.0
+numpy>=1.26
